@@ -1,0 +1,14 @@
+# dependencies / build output
+node_modules/
+dist/
+build/
+*.log
+
+# system
+.DS_Store
+Thumbs.db
+
+# editor
+.vscode/
+.idea/
+*.swp
