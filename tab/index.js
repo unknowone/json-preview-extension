@@ -1,15 +1,24 @@
 "use strict";
 
-const $input = document.getElementById("input");
-const $output = document.getElementById("output");
-const $status = document.getElementById("status");
-const $search = document.getElementById("search");
-const $btnFormat = document.getElementById("btn-format");
-const $btnMinify = document.getElementById("btn-minify");
-const $btnCopy = document.getElementById("btn-copy");
-const $btnClear = document.getElementById("btn-clear");
+const $input     = document.getElementById("input");
+const $output    = document.getElementById("output");
+const $status    = document.getElementById("status");
+const $search    = document.getElementById("search");
+const $inputMeta = document.getElementById("input-meta");
+const $splitter  = document.getElementById("splitter");
+const $workspace = document.querySelector(".workspace");
+const $inputPane = document.querySelector(".input-pane");
+const $outputPane = document.querySelector(".output-pane");
 
-const STORAGE_KEY = "jsonPreview.lastInput";
+const $btnFormat   = document.getElementById("btn-format");
+const $btnMinify   = document.getElementById("btn-minify");
+const $btnCopy     = document.getElementById("btn-copy");
+const $btnClear    = document.getElementById("btn-clear");
+const $btnExpand   = document.getElementById("btn-expand");
+const $btnCollapse = document.getElementById("btn-collapse");
+
+const STORAGE_KEY_INPUT = "jsonPreview.lastInput";
+const STORAGE_KEY_RATIO = "jsonPreview.splitRatio";
 
 // ---------- helpers ----------
 
@@ -19,14 +28,20 @@ function setStatus(text, type) {
 }
 
 function showPlaceholder() {
-  $output.innerHTML = '<div class="placeholder">在左侧粘贴 JSON 后点击「格式化」或按 Ctrl+Enter</div>';
+  $output.innerHTML =
+    '<div class="placeholder">在左侧粘贴 JSON 后点击「格式化」或按 Ctrl/⌘ + Enter</div>';
+}
+
+function updateInputMeta() {
+  const len = $input.value.length;
+  const bytes = new Blob([$input.value]).size;
+  $inputMeta.textContent = len ? `${len} 字符 · ${bytes} B` : "";
 }
 
 /**
  * Tolerant JSON parser:
  * 1. JSON.parse
- * 2. Try trimming stray wrappers / trailing commas
- * 3. Fall back to `new Function` eval for JS-object-like input (safe-ish, in popup scope)
+ * 2. Repair trailing commas, single quotes, unquoted keys
  */
 function tryParse(raw) {
   const text = raw.trim();
@@ -35,15 +50,14 @@ function tryParse(raw) {
   try {
     return JSON.parse(text);
   } catch (e1) {
-    // Try to repair: trailing commas, single quotes, unquoted keys
     const repaired = text
-      .replace(/,\s*([}\]])/g, "$1") // trailing commas
-      .replace(/([{,]\s*)([A-Za-z_$][\w$]*)\s*:/g, '$1"$2":') // unquoted keys
+      .replace(/,\s*([}\]])/g, "$1")
+      .replace(/([{,]\s*)([A-Za-z_$][\w$]*)\s*:/g, '$1"$2":')
       .replace(/'([^'\\]*(\\.[^'\\]*)*)'/g, (_, s) => JSON.stringify(s));
     try {
       return JSON.parse(repaired);
-    } catch (e2) {
-      throw e1; // surface the original, clearer error
+    } catch {
+      throw e1;
     }
   }
 }
@@ -81,7 +95,11 @@ function renderObject(obj) {
   const keys = Object.keys(obj);
   const container = createEl("span", "node object");
 
-  const toggle = createEl("span", keys.length ? "toggle" : "toggle empty", keys.length ? "▾" : " ");
+  const toggle = createEl(
+    "span",
+    keys.length ? "toggle" : "toggle empty",
+    keys.length ? "▾" : " "
+  );
   container.appendChild(toggle);
   container.appendChild(createEl("span", "punc", "{"));
 
@@ -90,8 +108,7 @@ function renderObject(obj) {
     return container;
   }
 
-  const summary = createEl("span", "summary", `… ${keys.length} keys`);
-  container.appendChild(summary);
+  container.appendChild(createEl("span", "summary", `… ${keys.length} keys`));
 
   const children = createEl("div", "children");
   keys.forEach((k, i) => {
@@ -118,7 +135,12 @@ function renderObject(obj) {
 
 function renderArray(arr) {
   const container = createEl("span", "node array");
-  const toggle = createEl("span", arr.length ? "toggle" : "toggle empty", arr.length ? "▾" : " ");
+
+  const toggle = createEl(
+    "span",
+    arr.length ? "toggle" : "toggle empty",
+    arr.length ? "▾" : " "
+  );
   container.appendChild(toggle);
   container.appendChild(createEl("span", "punc", "["));
 
@@ -127,8 +149,7 @@ function renderArray(arr) {
     return container;
   }
 
-  const summary = createEl("span", "summary", `… ${arr.length} items`);
-  container.appendChild(summary);
+  container.appendChild(createEl("span", "summary", `… ${arr.length} items`));
 
   const children = createEl("div", "children");
   arr.forEach((v, i) => {
@@ -158,6 +179,18 @@ function render(value) {
   $output.appendChild(tree);
 }
 
+function setAllCollapsed(collapsed) {
+  const nodes = $output.querySelectorAll(".node.object, .node.array");
+  nodes.forEach((n) => {
+    if (collapsed) n.classList.add("collapsed");
+    else n.classList.remove("collapsed");
+    const t = n.querySelector(":scope > .toggle");
+    if (t && !t.classList.contains("empty")) {
+      t.textContent = collapsed ? "▸" : "▾";
+    }
+  });
+}
+
 // ---------- actions ----------
 
 function doFormat() {
@@ -165,12 +198,14 @@ function doFormat() {
   try {
     const value = tryParse(raw);
     render(value);
-    const size = new Blob([raw]).size;
-    setStatus(`解析成功 · ${size} B`, "ok");
-    chrome.storage?.local?.set({ [STORAGE_KEY]: raw });
+    setStatus(
+      `✓ 解析成功 · 压缩后 ${JSON.stringify(value).length} 字符`,
+      "ok"
+    );
+    chrome.storage?.local?.set({ [STORAGE_KEY_INPUT]: raw });
   } catch (err) {
     $output.innerHTML = "";
-    setStatus(`解析失败：${err.message}`, "error");
+    setStatus(`✗ 解析失败：${err.message}`, "error");
   }
 }
 
@@ -180,10 +215,12 @@ function doMinify() {
     const value = tryParse(raw);
     const min = JSON.stringify(value);
     $input.value = min;
+    updateInputMeta();
     render(value);
-    setStatus(`已压缩 · ${min.length} 字符`, "ok");
+    setStatus(`✓ 已压缩 · ${min.length} 字符`, "ok");
+    chrome.storage?.local?.set({ [STORAGE_KEY_INPUT]: min });
   } catch (err) {
-    setStatus(`压缩失败：${err.message}`, "error");
+    setStatus(`✗ 压缩失败：${err.message}`, "error");
   }
 }
 
@@ -193,31 +230,37 @@ async function doCopy() {
     const value = tryParse(raw);
     const pretty = JSON.stringify(value, null, 2);
     await navigator.clipboard.writeText(pretty);
-    setStatus("已复制格式化后的 JSON", "ok");
+    setStatus("✓ 已复制格式化后的 JSON 到剪贴板", "ok");
   } catch (err) {
-    setStatus(`复制失败：${err.message}`, "error");
+    setStatus(`✗ 复制失败：${err.message}`, "error");
   }
 }
 
 function doClear() {
   $input.value = "";
   $search.value = "";
+  updateInputMeta();
   showPlaceholder();
   setStatus("");
-  chrome.storage?.local?.remove?.(STORAGE_KEY);
+  chrome.storage?.local?.remove?.(STORAGE_KEY_INPUT);
 }
 
 // ---------- search ----------
 
-function clearHits(root) {
-  root.querySelectorAll(".hit").forEach((el) => el.classList.remove("hit"));
+function clearHits() {
+  $output.querySelectorAll(".hit").forEach((el) => el.classList.remove("hit"));
 }
 
 function highlightSearch(term) {
-  clearHits($output);
-  if (!term) return;
+  clearHits();
+  if (!term) {
+    setStatus("");
+    return;
+  }
   const lower = term.toLowerCase();
-  const nodes = $output.querySelectorAll(".key, .string, .number, .boolean, .null");
+  const nodes = $output.querySelectorAll(
+    ".key, .string, .number, .boolean, .null"
+  );
   let count = 0;
   nodes.forEach((el) => {
     if (el.textContent.toLowerCase().includes(lower)) {
@@ -225,8 +268,48 @@ function highlightSearch(term) {
       count++;
     }
   });
-  setStatus(count ? `匹配 ${count} 处` : "无匹配", count ? "ok" : "error");
+  setStatus(
+    count ? `找到 ${count} 处匹配` : "无匹配",
+    count ? "ok" : "error"
+  );
 }
+
+// ---------- splitter ----------
+
+function applyRatio(ratio) {
+  const clamped = Math.max(0.15, Math.min(0.85, ratio));
+  $inputPane.style.flex = `${clamped} 1 0`;
+  $outputPane.style.flex = `${1 - clamped} 1 0`;
+}
+
+(function setupSplitter() {
+  let dragging = false;
+
+  $splitter.addEventListener("mousedown", (e) => {
+    dragging = true;
+    document.body.classList.add("dragging");
+    $splitter.classList.add("dragging");
+    e.preventDefault();
+  });
+
+  window.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    const rect = $workspace.getBoundingClientRect();
+    const ratio = (e.clientX - rect.left) / rect.width;
+    applyRatio(ratio);
+  });
+
+  window.addEventListener("mouseup", () => {
+    if (!dragging) return;
+    dragging = false;
+    document.body.classList.remove("dragging");
+    $splitter.classList.remove("dragging");
+    const rect = $workspace.getBoundingClientRect();
+    const leftWidth = $inputPane.getBoundingClientRect().width;
+    const ratio = leftWidth / rect.width;
+    chrome.storage?.local?.set({ [STORAGE_KEY_RATIO]: ratio });
+  });
+})();
 
 // ---------- wire up ----------
 
@@ -234,6 +317,10 @@ $btnFormat.addEventListener("click", doFormat);
 $btnMinify.addEventListener("click", doMinify);
 $btnCopy.addEventListener("click", doCopy);
 $btnClear.addEventListener("click", doClear);
+$btnExpand.addEventListener("click", () => setAllCollapsed(false));
+$btnCollapse.addEventListener("click", () => setAllCollapsed(true));
+
+$input.addEventListener("input", updateInputMeta);
 
 $input.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
@@ -242,20 +329,29 @@ $input.addEventListener("keydown", (e) => {
   }
 });
 
-$search.addEventListener("input", () => highlightSearch($search.value.trim()));
+$search.addEventListener("input", () =>
+  highlightSearch($search.value.trim())
+);
 
-// restore last input
+// ---------- boot ----------
+
 (function boot() {
   showPlaceholder();
+  updateInputMeta();
   try {
-    chrome.storage?.local?.get?.([STORAGE_KEY], (res) => {
-      const saved = res && res[STORAGE_KEY];
-      if (saved) {
-        $input.value = saved;
-        doFormat();
+    chrome.storage?.local?.get?.(
+      [STORAGE_KEY_INPUT, STORAGE_KEY_RATIO],
+      (res) => {
+        if (res?.[STORAGE_KEY_RATIO]) applyRatio(res[STORAGE_KEY_RATIO]);
+        const saved = res?.[STORAGE_KEY_INPUT];
+        if (saved) {
+          $input.value = saved;
+          updateInputMeta();
+          doFormat();
+        }
       }
-    });
+    );
   } catch {
-    /* no storage in dev preview, ignore */
+    /* storage unavailable in dev preview, ignore */
   }
 })();

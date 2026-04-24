@@ -1,11 +1,13 @@
 {
   "manifest_version": 3,
   "name": "JSON 预览助手",
-  "version": "1.0.0",
-  "description": "粘贴任意 JSON 文本，一键格式化、折叠、高亮预览。",
+  "version": "1.1.0",
+  "description": "在新标签页中左右分栏预览 JSON：左侧粘贴原文本，右侧高亮 / 折叠 / 搜索。",
   "action": {
-    "default_title": "JSON 预览助手",
-    "default_popup": "popup/popup.html"
+    "default_title": "打开 JSON 预览"
+  },
+  "background": {
+    "service_worker": "background.js"
   },
   "permissions": ["storage"]
 }
