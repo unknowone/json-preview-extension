@@ -13,37 +13,56 @@
       <span class="title">JSON 预览助手</span>
     </div>
     <div class="actions">
-      <button id="btn-format" title="格式化 (Ctrl/⌘ + Enter)">格式化</button>
-      <button id="btn-minify" title="压缩为单行">压缩</button>
-      <button id="btn-copy" title="复制格式化后的 JSON">复制</button>
-      <button id="btn-expand" title="全部展开">全部展开</button>
-      <button id="btn-collapse" title="全部折叠">全部折叠</button>
-      <button id="btn-clear" title="清空">清空</button>
+      <button id="btn-new-json" title="新建 JSON 文件">+ JSON</button>
+      <button id="btn-new-md" title="新建 Markdown 文件">+ MD</button>
+      <button id="btn-open" title="从磁盘打开文件">打开</button>
+      <button id="btn-save" title="保存到磁盘 (Ctrl/⌘ + S)">保存</button>
+      <span class="separator"></span>
+      <button id="btn-format" title="格式化 JSON (Ctrl/⌘ + Enter)">格式化</button>
+      <button id="btn-minify" title="压缩 JSON 为单行">压缩</button>
+      <button id="btn-copy" title="复制内容">复制</button>
+      <button id="btn-expand" title="全部展开 (JSON)">全部展开</button>
+      <button id="btn-collapse" title="全部折叠 (JSON)">全部折叠</button>
     </div>
   </header>
 
   <main class="workspace">
-    <section class="pane input-pane">
+    <!-- Left: File sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">文件</span>
+        <button id="btn-toggle-sidebar" class="sidebar-toggle" title="收起侧边栏">◀</button>
+      </div>
+      <ul id="file-list" class="file-list"></ul>
+    </aside>
+
+    <!-- Splitter 1: sidebar ↔ editor -->
+    <div class="splitter" id="splitter1" title="拖动调整"></div>
+
+    <!-- Middle: Editor -->
+    <section class="pane editor-pane">
       <div class="pane-header">
-        <span class="pane-title">原文本</span>
+        <span class="pane-title" id="editor-title">编辑器</span>
         <span id="input-meta" class="meta"></span>
       </div>
       <textarea
         id="input"
         spellcheck="false"
-        placeholder='在此粘贴 JSON，例如：{"name":"claude","ok":true}&#10;&#10;快捷键：Ctrl/⌘ + Enter 格式化'
+        placeholder="在此编辑文件内容..."
       ></textarea>
     </section>
 
-    <div class="splitter" id="splitter" title="拖动调整左右比例"></div>
+    <!-- Splitter 2: editor ↔ preview -->
+    <div class="splitter" id="splitter2" title="拖动调整"></div>
 
-    <section class="pane output-pane">
+    <!-- Right: Preview -->
+    <section class="pane preview-pane">
       <div class="pane-header">
-        <span class="pane-title">预览结果</span>
+        <span class="pane-title">预览</span>
         <input
           id="search"
           type="search"
-          placeholder="搜索 key 或 value..."
+          placeholder="搜索..."
           autocomplete="off"
         />
       </div>
@@ -53,6 +72,7 @@
 
   <footer id="status" class="status"></footer>
 
+  <script src="lib/marked.min.js"></script>
   <script src="index.js"></script>
 </body>
 </html>

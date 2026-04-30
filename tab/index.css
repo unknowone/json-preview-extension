@@ -2,10 +2,12 @@
   --bg: #1e1f22;
   --bg-soft: #282a2e;
   --bg-softer: #23252a;
+  --bg-sidebar: #252729;
   --border: #3a3d42;
   --fg: #e6e6e6;
   --fg-dim: #9aa0a6;
   --accent: #4f8cff;
+  --accent-dim: #3a6fd8;
   --ok: #5ccf7a;
   --err: #ff6b6b;
   --key: #9cdcfe;
@@ -17,11 +19,9 @@
   --highlight: #725c1a;
 }
 
-* { box-sizing: border-box; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
-  margin: 0;
-  padding: 0;
   width: 100%;
   height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
@@ -38,13 +38,13 @@ body {
   height: 100vh;
 }
 
-/* ---------- toolbar ---------- */
+/* ========== toolbar ========== */
 
 .toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 16px;
+  padding: 8px 14px;
   background: var(--bg-soft);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
@@ -60,27 +60,34 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
   background: linear-gradient(135deg, #4f8cff, #8d5cff);
   color: #fff;
   font-weight: 700;
   font-family: "JetBrains Mono", Menlo, Consolas, monospace;
-  font-size: 12px;
+  font-size: 11px;
   letter-spacing: -1px;
 }
 
 .brand .title {
   font-size: 14px;
   font-weight: 600;
-  letter-spacing: 0.3px;
 }
 
 .toolbar .actions {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.toolbar .separator {
+  width: 1px;
+  height: 18px;
+  background: var(--border);
+  margin: 0 4px;
 }
 
 .toolbar button {
@@ -88,10 +95,11 @@ body {
   color: var(--fg);
   border: 1px solid var(--border);
   border-radius: 4px;
-  padding: 6px 12px;
+  padding: 5px 10px;
   cursor: pointer;
   font-size: 12px;
   transition: all 0.15s ease;
+  white-space: nowrap;
 }
 
 .toolbar button:hover {
@@ -100,7 +108,7 @@ body {
   color: #fff;
 }
 
-/* ---------- workspace (left / right) ---------- */
+/* ========== workspace (3-column) ========== */
 
 .workspace {
   display: flex;
@@ -108,22 +116,138 @@ body {
   min-height: 0;
 }
 
+/* ========== sidebar ========== */
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  width: 180px;
+  min-width: 120px;
+  max-width: 300px;
+  background: var(--bg-sidebar);
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+  transition: width 0.2s ease;
+}
+
+.sidebar.collapsed {
+  width: 0 !important;
+  min-width: 0;
+  overflow: hidden;
+  border-right: none;
+}
+
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sidebar-title {
+  font-size: 11px;
+  color: var(--fg-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sidebar-toggle {
+  background: none;
+  border: none;
+  color: var(--fg-dim);
+  cursor: pointer;
+  font-size: 10px;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.sidebar-toggle:hover {
+  color: var(--fg);
+  background: var(--border);
+}
+
+.file-list {
+  list-style: none;
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.file-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: all 0.1s ease;
+  position: relative;
+}
+
+.file-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.file-item.active {
+  background: rgba(79, 140, 255, 0.1);
+  border-left-color: var(--accent);
+}
+
+.file-item .file-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+}
+
+.file-item .file-name {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.file-item .file-delete {
+  display: none;
+  background: none;
+  border: none;
+  color: var(--fg-dim);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 0 2px;
+  border-radius: 3px;
+  line-height: 1;
+}
+
+.file-item:hover .file-delete {
+  display: inline-block;
+}
+
+.file-item .file-delete:hover {
+  color: var(--err);
+  background: rgba(255, 107, 107, 0.15);
+}
+
+/* ========== panes ========== */
+
 .pane {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  min-width: 200px;
+  min-width: 150px;
   flex: 1 1 0;
 }
 
-.input-pane  { background: var(--bg); }
-.output-pane { background: var(--bg-softer); }
+.editor-pane  { background: var(--bg); }
+.preview-pane { background: var(--bg-softer); }
 
 .pane-header {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 12px;
+  padding: 7px 12px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-soft);
   flex-shrink: 0;
@@ -132,8 +256,7 @@ body {
 .pane-title {
   font-size: 12px;
   color: var(--fg-dim);
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
 
 .meta {
@@ -144,8 +267,8 @@ body {
 
 #search {
   margin-left: auto;
-  flex: 0 1 260px;
-  padding: 5px 10px;
+  flex: 0 1 200px;
+  padding: 4px 8px;
   background: var(--bg);
   border: 1px solid var(--border);
   color: var(--fg);
@@ -188,7 +311,7 @@ body {
   white-space: normal;
 }
 
-/* ---------- splitter ---------- */
+/* ========== splitter ========== */
 
 .splitter {
   width: 5px;
@@ -203,10 +326,10 @@ body {
 
 body.dragging { cursor: col-resize; user-select: none; }
 
-/* ---------- status bar ---------- */
+/* ========== status bar ========== */
 
 .status {
-  padding: 5px 16px;
+  padding: 4px 14px;
   font-size: 11px;
   color: var(--fg-dim);
   border-top: 1px solid var(--border);
@@ -220,7 +343,7 @@ body.dragging { cursor: col-resize; user-select: none; }
 .status.error { color: var(--err); }
 .status.ok    { color: var(--ok); }
 
-/* ---------- JSON tree ---------- */
+/* ========== JSON tree ========== */
 
 .tree   { display: block; }
 .node   { display: block; }
@@ -265,3 +388,127 @@ body.dragging { cursor: col-resize; user-select: none; }
   border-radius: 2px;
   padding: 0 1px;
 }
+
+/* ========== Markdown preview ========== */
+
+.output.markdown-preview {
+  white-space: normal;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+  line-height: 1.7;
+  padding: 16px 20px;
+}
+
+.output.markdown-preview h1,
+.output.markdown-preview h2,
+.output.markdown-preview h3,
+.output.markdown-preview h4,
+.output.markdown-preview h5,
+.output.markdown-preview h6 {
+  margin-top: 1.2em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+  color: var(--fg);
+  line-height: 1.3;
+}
+
+.output.markdown-preview h1 { font-size: 1.8em; border-bottom: 1px solid var(--border); padding-bottom: 0.3em; }
+.output.markdown-preview h2 { font-size: 1.5em; border-bottom: 1px solid var(--border); padding-bottom: 0.2em; }
+.output.markdown-preview h3 { font-size: 1.25em; }
+.output.markdown-preview h4 { font-size: 1.1em; }
+
+.output.markdown-preview p {
+  margin: 0.8em 0;
+}
+
+.output.markdown-preview a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.output.markdown-preview a:hover {
+  text-decoration: underline;
+}
+
+.output.markdown-preview ul,
+.output.markdown-preview ol {
+  margin: 0.6em 0;
+  padding-left: 1.6em;
+}
+
+.output.markdown-preview li {
+  margin: 0.3em 0;
+}
+
+.output.markdown-preview blockquote {
+  margin: 0.8em 0;
+  padding: 0.4em 1em;
+  border-left: 3px solid var(--accent);
+  background: rgba(79, 140, 255, 0.06);
+  color: var(--fg-dim);
+}
+
+.output.markdown-preview code {
+  font-family: "JetBrains Mono", Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 2px 5px;
+  border-radius: 3px;
+  color: var(--string);
+}
+
+.output.markdown-preview pre {
+  margin: 0.8em 0;
+  padding: 12px 14px;
+  background: #1a1b1e;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.output.markdown-preview pre code {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  color: var(--fg);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.output.markdown-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0.8em 0;
+  font-size: 13px;
+}
+
+.output.markdown-preview th,
+.output.markdown-preview td {
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  text-align: left;
+}
+
+.output.markdown-preview th {
+  background: var(--bg-soft);
+  font-weight: 600;
+}
+
+.output.markdown-preview tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.output.markdown-preview hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.5em 0;
+}
+
+.output.markdown-preview img {
+  max-width: 100%;
+  border-radius: 4px;
+}
+
+.output.markdown-preview strong { color: var(--fg); }
+.output.markdown-preview em     { font-style: italic; }
